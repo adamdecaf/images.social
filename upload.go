@@ -1,16 +1,18 @@
 package main
 
 import (
-	"log"
-	"io"
-	// "io/ioutil"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
-	"path"
-	"path/filepath"
+	"io"
+	"log"
 	"mime/multipart"
 	"net/http"
 	"os"
+	"path"
+	"path/filepath"
 	"strings"
+	"time"
 )
 
 const (
@@ -38,34 +40,44 @@ func uploadRoute(w http.ResponseWriter, r *http.Request) {
 
 		// Grab the file and copy over to our cache location
 		// todo: verify it a bit
-		err = cp(file, path.Join(LocalFSCachePath, "/foo-random"))
+		out := temp()
+		tmp := path.Join(LocalFSCachePath, "/"+out)
+		hash, err := cpAndHash(file, tmp)
 		if err != nil {
 			http.Error(w, "bad request", http.StatusBadRequest)
 			return
+		}
+
+		// Move from temp to name under hash
+		final := path.Join(LocalFSCachePath, hash)
+		if _, err := os.Stat(final); err != nil {
+			os.Rename(tmp, final)
 		}
 	}
 
 	//
 }
 
-func cp(src multipart.File, d string) error {
+// cpAndHash copies the multipart file to a non-temp file on disk as well as
+// returns the hash (Sha256) of the file contents
+func cpAndHash(src multipart.File, d string) (string, error) {
 	if strings.HasPrefix(d, "..") {
 		log.Println("A")
-		return CopyFailed
+		return "", CopyFailed
 	}
 
 	// abs dst path
 	dst, err := filepath.Abs(d)
 	if err != nil {
 		log.Println("B")
-		return CopyFailed
+		return "", CopyFailed
 	}
 
 	// Check the out file doesn't exist
 	_, err = os.Stat(dst)
 	if err == nil {
 		log.Println("C")
-		return CopyFailed
+		return "", CopyFailed
 	}
 
 	// Open out file
@@ -73,16 +85,26 @@ func cp(src multipart.File, d string) error {
 	if err != nil {
 		log.Println(dst)
 		log.Println("D")
-		return CopyFailed
+		return "", CopyFailed
 	}
 	defer out.Close()
 
+	// Prep hash
+	h := sha256.New()
+	t := io.TeeReader(src, h)
+
 	// Copy the file contents
-	_, err = io.Copy(out, src)
+	_, err = io.Copy(out, t)
 	cerr := out.Close()
 	if err != nil {
 		log.Println("E")
-		return CopyFailed
+		return "", CopyFailed
 	}
-	return cerr
+	return hex.EncodeToString(h.Sum(nil)), cerr
+}
+
+func temp() string {
+	h := sha256.New()
+	h.Write([]byte(time.Now().String())) // todo: something that's not time based?
+	return hex.EncodeToString(h.Sum(nil))
 }

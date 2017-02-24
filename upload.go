@@ -51,14 +51,6 @@ func uploadRoute(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Get the file extension from reading the file
-		ext := Detect(file).Ext()
-		log.Printf("ext = '%s'\n", ext)
-		if ext == "" {
-			http.Error(w, "bad request", http.StatusBadRequest)
-			return
-		}
-
 		// Grab the file and copy over to our cache location
 		out := temp()
 		tmp := path.Join(LocalFSCachePath, "/"+out)
@@ -68,11 +60,25 @@ func uploadRoute(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		// Get the file extension from reading the file
+		f, err := os.Open(tmp)
+		if err != nil {
+			http.Error(w, "bad request", http.StatusBadRequest)
+			return
+		}
+		defer f.Close()
+		ext := Detect(f).Ext()
+		if ext == "" {
+			http.Error(w, "bad request", http.StatusBadRequest)
+			return
+		}
+
 		// Move from temp to name under hash
 		final := path.Join(LocalFSCachePath, hash+ext)
-		log.Println(final)
 		if _, err := os.Stat(final); err != nil {
 			os.Rename(tmp, final)
+			http.Redirect(w, r, path.Join("/i/", hash+ext), http.StatusFound)
+			return
 		}
 	}
 	http.Error(w, "bad request", http.StatusBadRequest)

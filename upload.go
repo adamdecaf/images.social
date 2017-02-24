@@ -62,8 +62,7 @@ func uploadRoute(w http.ResponseWriter, r *http.Request) {
 			os.Rename(tmp, final)
 		}
 	}
-
-	//
+	http.Error(w, "bad request", http.StatusBadRequest)
 }
 
 // cpAndHash copies the multipart file to a non-temp file on disk as well as

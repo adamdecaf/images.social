@@ -4,9 +4,6 @@ import (
 	"expvar"
 )
 
-// metrics, w/ expvar
-// - successful/failed uploads
-
 var (
 	blacklistHits = expvar.NewInt("blacklist-hits")
 

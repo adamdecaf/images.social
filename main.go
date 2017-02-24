@@ -23,7 +23,6 @@ func main() {
 		log.Fatalf("error creating cache dir, err=%v", err)
 	}
 
-	// Routes
 	http.Handle("/", http.FileServer(http.Dir("./html/")))
 	http.HandleFunc("/ping", pingRoute)
 	http.Handle("/i/", http.StripPrefix("/i/", http.FileServer(http.Dir(LocalFSCachePath))))

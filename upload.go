@@ -34,7 +34,8 @@ func init() {
 
 func uploadRoute(w http.ResponseWriter, r *http.Request) {
 	if blacklist.Blocked(*r) {
-		http.Error(w, "bad request", http.StatusBadRequest)
+		MarkBlacklistHits()
+		fail(w)
 	}
 
 	if r.Method == "POST" {
@@ -47,7 +48,7 @@ func uploadRoute(w http.ResponseWriter, r *http.Request) {
 			}
 		}()
 		if err != nil {
-			http.Error(w, "bad request", http.StatusBadRequest)
+			fail(w)
 			return
 		}
 
@@ -56,20 +57,20 @@ func uploadRoute(w http.ResponseWriter, r *http.Request) {
 		tmp := path.Join(LocalFSCachePath, "/"+out)
 		hash, err := cpAndHash(file, tmp)
 		if err != nil {
-			http.Error(w, "bad request", http.StatusBadRequest)
+			fail(w)
 			return
 		}
 
 		// Get the file extension from reading the file
 		f, err := os.Open(tmp)
 		if err != nil {
-			http.Error(w, "bad request", http.StatusBadRequest)
+			fail(w)
 			return
 		}
 		defer f.Close()
 		ext := Detect(f).Ext()
 		if ext == "" {
-			http.Error(w, "bad request", http.StatusBadRequest)
+			fail(w)
 			return
 		}
 
@@ -77,11 +78,12 @@ func uploadRoute(w http.ResponseWriter, r *http.Request) {
 		final := path.Join(LocalFSCachePath, hash+ext)
 		if _, err := os.Stat(final); err != nil {
 			os.Rename(tmp, final)
-			http.Redirect(w, r, path.Join("/i/", hash+ext), http.StatusFound)
-			return
+			MarkFileUpload()
 		}
+		http.Redirect(w, r, path.Join("/i/", hash+ext), http.StatusFound)
+		return
 	}
-	http.Error(w, "bad request", http.StatusBadRequest)
+	fail(w)
 }
 
 // cpAndHash copies the multipart file to a non-temp file on disk as well as
@@ -133,4 +135,9 @@ func temp() string {
 	h := sha256.New()
 	h.Write([]byte(time.Now().String())) // todo: something that's not time based?
 	return hex.EncodeToString(h.Sum(nil))
+}
+
+func fail(w http.ResponseWriter) {
+	MarkUploadFailed()
+	http.Error(w, "bad request", http.StatusBadRequest)
 }

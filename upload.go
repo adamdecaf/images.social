@@ -20,10 +20,23 @@ const (
 )
 
 var (
+	blacklist Blacklist
 	CopyFailed = errors.New("error copying file")
 )
 
+func init() {
+	bl, err := NewBlacklist("./blacklist")
+	if err != nil {
+		panic(err)
+	}
+	blacklist = bl
+}
+
 func uploadRoute(w http.ResponseWriter, r *http.Request) {
+	if blacklist.Blocked(*r) {
+		http.Error(w, "bad request", http.StatusBadRequest)
+	}
+
 	if r.Method == "POST" {
 		r.ParseMultipartForm(MaxInmemUploadSize)
 

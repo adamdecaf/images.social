@@ -1,4 +1,4 @@
-package main
+package upload
 
 // todo:
 // - can we disable the default /debug/vars handler?
@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"expvar"
+	"github.com/adamdecaf/images.social/blacklist"
 	"github.com/adamdecaf/images.social/cache"
 	"io"
 	"log"
@@ -25,7 +26,7 @@ const (
 )
 
 var (
-	blacklist     Blacklist
+	blocker     blacklist.Blacklist
 	errCopyFailed = errors.New("error copying file")
 
 	// Metrics
@@ -35,15 +36,15 @@ var (
 )
 
 func init() {
-	bl, err := NewBlacklist("./blacklist")
+	bl, err := blacklist.New("../blacklist/blacklist")
 	if err != nil {
 		panic(err)
 	}
-	blacklist = bl
+	blocker = bl
 }
 
-func uploadRoute(w http.ResponseWriter, r *http.Request) {
-	if blacklist.Blocked(*r) {
+func Route(w http.ResponseWriter, r *http.Request) {
+	if blocker.Blocked(*r) {
 		markBlacklistHits()
 		fail(w)
 	}
@@ -88,7 +89,7 @@ func uploadRoute(w http.ResponseWriter, r *http.Request) {
 		// Move from temp to name under hash
 		final := path.Join(cache.Dir(), hash+ext)
 		if _, err := os.Stat(final); err != nil {
-			os.Rename(tmp, final)
+			os.Rename(tmp, final) // todo: move this to a cache.Store(..) call
 			markFileUpload()
 		}
 		http.Redirect(w, r, path.Join("/i/", hash+ext), http.StatusFound)
@@ -96,6 +97,8 @@ func uploadRoute(w http.ResponseWriter, r *http.Request) {
 	}
 	fail(w)
 }
+
+// This should likely live in cache.Store(..) and have it return a better object
 
 // cpAndHash copies the multipart file to a non-temp file on disk as well as
 // returns the hash (Sha256) of the file contents

@@ -8,4 +8,4 @@ vet:
 	go tool vet .
 
 test: build
-	go test -v .
+	go test -v ./...

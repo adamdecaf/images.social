@@ -1,4 +1,4 @@
-package main
+package upload
 
 import (
 	"os"
@@ -16,7 +16,7 @@ func TestImageDetection(t *testing.T) {
 		{"hat.gif", ImageType("gif")},
 	}
 	for _, v := range cases {
-		f, err := os.Open(path.Join("testdata/", v.name))
+		f, err := os.Open(path.Join("../testdata/", v.name))
 		if err != nil {
 			t.Errorf("error reading test file, err=%v", err)
 		}

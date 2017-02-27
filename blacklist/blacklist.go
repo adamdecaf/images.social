@@ -1,10 +1,11 @@
-package main
+package blacklist
 
 import (
 	"bufio"
 	"io"
 	"net"
 	"net/http"
+	"path"
 	"os"
 )
 
@@ -18,9 +19,10 @@ type Blacklist interface {
 	Blocked(http.Request) bool
 }
 
-// NewBlacklist creates a new blacklist object by reading from a filepath, right now
+// New creates a new blacklist object by reading from a filepath, right now
 // the format is simple in that it's matching on blocked ip addresses.
-func NewBlacklist(filepath string) (Blacklist, error) {
+func New(filepath string) (Blacklist, error) {
+	filepath = expandPath(filepath)
 	_, err := os.Stat(filepath)
 	if err != nil {
 		return ipBlacklist{}, err
@@ -55,6 +57,19 @@ func NewBlacklist(filepath string) (Blacklist, error) {
 		ips:      ips,
 		cidrs:    cidrs,
 	}, nil
+}
+
+func expandPath(p string) string {
+	if path.IsAbs(p) {
+		return p
+	}
+
+	dir, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+
+	return path.Join(dir, p)
 }
 
 // IP blacklists are based on cidr ranges or specific ips

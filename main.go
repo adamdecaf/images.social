@@ -13,6 +13,7 @@ var (
 )
 
 const (
+	// LocalFSCachePath -- todo: replace with cache/ subpacjage
 	LocalFSCachePath = "./cache"
 )
 

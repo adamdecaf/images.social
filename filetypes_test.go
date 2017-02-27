@@ -11,16 +11,19 @@ func TestImageDetection(t *testing.T) {
 		name string
 		tpe  ImageType
 	}{
-		{"hat.jpg", JPEG},
-		{"hat.png", PNG},
-		{"hat.gif", GIF},
+		{"hat.jpg", ImageType("jpeg")},
+		{"hat.png", ImageType("png")},
+		{"hat.gif", ImageType("gif")},
 	}
 	for _, v := range cases {
 		f, err := os.Open(path.Join("testdata/", v.name))
 		if err != nil {
 			t.Errorf("error reading test file, err=%v", err)
 		}
-		tpe := Detect(f)
+		tpe, err := Detect(f)
+		if err != nil {
+			t.Errorf("error detecting on file '%s'", v.name)
+		}
 		if tpe != v.tpe {
 			t.Errorf("detected type '%s' not equal to expected '%s'", tpe.Ext(), v.tpe.Ext())
 		}

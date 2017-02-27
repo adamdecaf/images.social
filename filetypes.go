@@ -1,52 +1,40 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"image"
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
 	"io"
-	"time"
+	"strings"
 )
 
-const (
-	JPEG ImageType = iota
-	PNG
-	GIF
-	UNKNOWN
-)
+// ImageType represents the underlying content type from an image. It's intended to
+// be used for generating the extension via Ext().
+type ImageType string
 
-var (
-	ImageDetectionTimeout = 1000 * time.Millisecond
-)
-
-type ImageType int64
-
+// Ext generates a string representation of the full file extension based on the
+// content type that was created with ImageType.
 func (i ImageType) Ext() string {
-	if i == JPEG {
-		return ".jpeg"
-	}
-	if i == PNG {
-		return ".png"
-	}
-	if i == GIF {
-		return ".gif"
-	}
-	return ""
+	return fmt.Sprintf(".%s", strings.ToLower(string(i)))
 }
 
-func Detect(in io.Reader) ImageType {
+// Detect attempts to determine the content type of the provided input Reader.
+// It is a blocking call (be warned if the Reader is slow).
+func Detect(in io.Reader) (ImageType, error) {
 	_, format, err := image.Decode(in)
 	if err == nil {
 		if format == "jpeg" {
-			return JPEG
+			return ImageType("jpeg"), nil
 		}
 		if format == "png" {
-			return PNG
+			return ImageType("png"), nil
 		}
 		if format == "gif" {
-			return GIF
+			return ImageType("gif"), nil
 		}
 	}
-	return UNKNOWN
+	return ImageType("unknown"), errors.New("Unknown image type, detected")
 }

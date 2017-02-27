@@ -1,9 +1,13 @@
 package main
 
+// todo:
+// - can we disable the default /debug/vars handler?
+
 import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"expvar"
 	"io"
 	"log"
 	"mime/multipart"
@@ -16,12 +20,17 @@ import (
 )
 
 const (
-	MaxInmemUploadSize = 0 // Force file uploads to server disk
+	maxInmemUploadSize = 0 // Force file uploads to server disk
 )
 
 var (
-	blacklist  Blacklist
-	CopyFailed = errors.New("error copying file")
+	blacklist     Blacklist
+	errCopyFailed = errors.New("error copying file")
+
+	// Metrics
+	blacklistHits = expvar.NewInt("blacklist-hits")
+	filesUploaded = expvar.NewInt("files-uploaded")
+	failedUploads = expvar.NewInt("failed-uploads")
 )
 
 func init() {
@@ -34,12 +43,12 @@ func init() {
 
 func uploadRoute(w http.ResponseWriter, r *http.Request) {
 	if blacklist.Blocked(*r) {
-		MarkBlacklistHits()
+		markBlacklistHits()
 		fail(w)
 	}
 
 	if r.Method == "POST" {
-		r.ParseMultipartForm(MaxInmemUploadSize)
+		r.ParseMultipartForm(maxInmemUploadSize)
 
 		file, _, err := r.FormFile("file")
 		defer func() {
@@ -68,17 +77,18 @@ func uploadRoute(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		defer f.Close()
-		ext := Detect(f).Ext()
-		if ext == "" {
+		tpe, err := Detect(f)
+		if err != nil {
 			fail(w)
 			return
 		}
+		ext := tpe.Ext()
 
 		// Move from temp to name under hash
 		final := path.Join(LocalFSCachePath, hash+ext)
 		if _, err := os.Stat(final); err != nil {
 			os.Rename(tmp, final)
-			MarkFileUpload()
+			markFileUpload()
 		}
 		http.Redirect(w, r, path.Join("/i/", hash+ext), http.StatusFound)
 		return
@@ -91,21 +101,21 @@ func uploadRoute(w http.ResponseWriter, r *http.Request) {
 func cpAndHash(src multipart.File, d string) (string, error) {
 	if strings.HasPrefix(d, "..") {
 		log.Println("A")
-		return "", CopyFailed
+		return "", errCopyFailed
 	}
 
 	// abs dst path
 	dst, err := filepath.Abs(d)
 	if err != nil {
 		log.Println("B")
-		return "", CopyFailed
+		return "", errCopyFailed
 	}
 
 	// Check the out file doesn't exist
 	_, err = os.Stat(dst)
 	if err == nil {
 		log.Println("C")
-		return "", CopyFailed
+		return "", errCopyFailed
 	}
 
 	// Open out file
@@ -113,7 +123,7 @@ func cpAndHash(src multipart.File, d string) (string, error) {
 	if err != nil {
 		log.Println(dst)
 		log.Println("D")
-		return "", CopyFailed
+		return "", errCopyFailed
 	}
 	defer out.Close()
 
@@ -126,7 +136,7 @@ func cpAndHash(src multipart.File, d string) (string, error) {
 	cerr := out.Close()
 	if err != nil {
 		log.Println("E")
-		return "", CopyFailed
+		return "", errCopyFailed
 	}
 	return hex.EncodeToString(h.Sum(nil)), cerr
 }
@@ -138,6 +148,11 @@ func temp() string {
 }
 
 func fail(w http.ResponseWriter) {
-	MarkUploadFailed()
+	markUploadFailed()
 	http.Error(w, "bad request", http.StatusBadRequest)
 }
+
+// Metrics collecting
+func markFileUpload()    { filesUploaded.Add(1) }
+func markUploadFailed()  { failedUploads.Add(1) }
+func markBlacklistHits() { blacklistHits.Add(1) }

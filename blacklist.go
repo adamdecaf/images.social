@@ -12,10 +12,14 @@ import (
 // - ip, read from file every N minutes
 // - upload frequency, each upload is recorded
 
+// Blacklist inspects a request to determine if the request needs to be blocked.
+// It is expected that the `Blocked` method WILL NOT modify the request in any way.
 type Blacklist interface {
 	Blocked(http.Request) bool
 }
 
+// NewBlacklist creates a new blacklist object by reading from a filepath, right now
+// the format is simple in that it's matching on blocked ip addresses.
 func NewBlacklist(filepath string) (Blacklist, error) {
 	_, err := os.Stat(filepath)
 	if err != nil {

@@ -21,10 +21,17 @@ var (
 )
 
 type ImageType int64
+
 func (i ImageType) Ext() string {
-	if i == JPEG { return ".jpeg" }
-	if i == PNG  { return ".png"  }
-	if i == GIF  { return ".gif"  }
+	if i == JPEG {
+		return ".jpeg"
+	}
+	if i == PNG {
+		return ".png"
+	}
+	if i == GIF {
+		return ".gif"
+	}
 	return ""
 }
 
@@ -34,10 +41,10 @@ func Detect(in io.Reader) ImageType {
 		if format == "jpeg" {
 			return JPEG
 		}
-		if format == "png"  {
+		if format == "png" {
 			return PNG
 		}
-		if format == "gif"  {
+		if format == "gif" {
 			return GIF
 		}
 	}

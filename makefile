@@ -4,6 +4,7 @@ build: vet
 	go build .
 
 vet:
+	go fmt github.com/adamdecaf/images.social
 	go tool vet .
 
 test: build

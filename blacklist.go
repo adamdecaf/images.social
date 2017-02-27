@@ -48,8 +48,8 @@ func NewBlacklist(filepath string) (Blacklist, error) {
 
 	return ipBlacklist{
 		filepath: filepath,
-		ips: ips,
-		cidrs: cidrs,
+		ips:      ips,
+		cidrs:    cidrs,
 	}, nil
 }
 
@@ -59,7 +59,7 @@ type ipBlacklist struct {
 
 	filepath string
 
-	ips []net.IP
+	ips   []net.IP
 	cidrs []net.IPNet
 }
 

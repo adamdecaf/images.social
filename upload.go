@@ -20,7 +20,7 @@ const (
 )
 
 var (
-	blacklist Blacklist
+	blacklist  Blacklist
 	CopyFailed = errors.New("error copying file")
 )
 

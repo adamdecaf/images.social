@@ -7,13 +7,13 @@ import (
 )
 
 func TestImageDetection(t *testing.T) {
-	cases := []struct{
+	cases := []struct {
 		name string
-		tpe ImageType
-	} {
-		{ "hat.jpg", JPEG },
-		{ "hat.png", PNG },
-		{ "hat.gif", GIF },
+		tpe  ImageType
+	}{
+		{"hat.jpg", JPEG},
+		{"hat.png", PNG},
+		{"hat.gif", GIF},
 	}
 	for _, v := range cases {
 		f, err := os.Open(path.Join("testdata/", v.name))

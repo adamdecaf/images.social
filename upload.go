@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"expvar"
+	"github.com/adamdecaf/images.social/cache"
 	"io"
 	"log"
 	"mime/multipart"
@@ -63,7 +64,7 @@ func uploadRoute(w http.ResponseWriter, r *http.Request) {
 
 		// Grab the file and copy over to our cache location
 		out := temp()
-		tmp := path.Join(LocalFSCachePath, "/"+out)
+		tmp := path.Join(cache.Dir(), "/"+out)
 		hash, err := cpAndHash(file, tmp)
 		if err != nil {
 			fail(w)
@@ -85,7 +86,7 @@ func uploadRoute(w http.ResponseWriter, r *http.Request) {
 		ext := tpe.Ext()
 
 		// Move from temp to name under hash
-		final := path.Join(LocalFSCachePath, hash+ext)
+		final := path.Join(cache.Dir(), hash+ext)
 		if _, err := os.Stat(final); err != nil {
 			os.Rename(tmp, final)
 			markFileUpload()
